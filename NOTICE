@@ -1,0 +1,5 @@
+Third-party notice
+
+lme_mind/rubric.py reproduces get_anscheck_prompt from LongMemEval
+(https://github.com/xiaowu0162/LongMemEval), which is MIT licensed:
+Copyright (c) 2024 Di Wu.

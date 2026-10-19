@@ -139,6 +139,6 @@ exact scripts we ran and every difference.
 
 The grading prompt in `lme_mind/rubric.py` is copied unchanged from LongMemEval (MIT licence,
 Copyright (c) 2024 Di Wu); a test checks it against the original. Everything else here is MIT
-licensed; see [LICENSE](LICENSE).
+licensed; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 Mensara is built by Xanadu Labs LLC. Questions and corrections: open an issue.
