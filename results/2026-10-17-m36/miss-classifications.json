@@ -1,0 +1,124 @@
+{
+ "method": "Operator diagnosis from preserved answers, annotated source turns and native read traces; no regrading. R includes source/reference conflicts. Consolidation classes identify context/supersession conflicts, not proof that a later user statement is false.",
+ "counts": {
+  "hedging": 3,
+  "reasoning": 19,
+  "consolidation error": 2,
+  "known label error": 3,
+  "judge strictness": 1
+ },
+ "cases": {
+  "ec81a493": {
+   "class": "hedging",
+   "note": "500 qualified as poster edition, not album copies."
+  },
+  "0a995998": {
+   "class": "reasoning",
+   "note": "Deduplicated exchanged boots; two items versus reference three."
+  },
+  "6d550036": {
+   "class": "reasoning",
+   "note": "Counted extra work leadership; three projects versus two."
+  },
+  "gpt4_2f8be40d": {
+   "class": "reasoning",
+   "note": "Extra weddings counted without resolving event identity."
+  },
+  "88432d0a": {
+   "class": "reasoning",
+   "note": "Repeated baking reports treated as nine separate occasions."
+  },
+  "7024f17c": {
+   "class": "reasoning",
+   "note": "Calendar-week cutoff excluded the reference’s May 20 jog."
+  },
+  "gpt4_2ba83207": {
+   "class": "reasoning",
+   "note": "Excluded April Thrive order from “past month.”"
+  },
+  "d851d5ba": {
+   "class": "reasoning",
+   "note": "Added concert proceeds to personal charity total."
+  },
+  "gpt4_ab202e7f": {
+   "class": "reasoning",
+   "note": "Omitted coffee-maker replacement despite reading its source."
+  },
+  "bf659f65": {
+   "class": "reasoning",
+   "note": "Excluded owned signed vinyl from purchase/download count."
+  },
+  "75832dbd": {
+   "class": "reasoning",
+   "note": "Mixed healthcare recommendations with unrelated robotics interests."
+  },
+  "35a27287": {
+   "class": "hedging",
+   "note": "Asked location only; read language preferences went unused."
+  },
+  "09d032c9": {
+   "class": "reasoning",
+   "note": "Read power-bank ownership; returned generic battery advice."
+  },
+  "7405e8b1": {
+   "class": "hedging",
+   "note": "Correct 40% versus 20%; withheld first-order comparison."
+  },
+  "9ee3ecd6": {
+   "class": "reasoning",
+   "note": "Returned 300 total instead of 300−200 remaining."
+  },
+  "ba358f49": {
+   "class": "reasoning",
+   "note": "Age 32 reached timeline; answer said age unavailable."
+  },
+  "efc3f7c2": {
+   "class": "consolidation error",
+   "note": "Later daily 7:30 supplanted weekday 6:30; reference expects 30m."
+  },
+  "a96c20ee_abs": {
+   "class": "reasoning",
+   "note": "Transferred conference/thesis location to an undergrad poster."
+  },
+  "09ba9854_abs": {
+   "class": "reasoning",
+   "note": "Used assistant bus estimates as the user’s actual fare."
+  },
+  "9a707b81": {
+   "class": "known label error",
+   "note": "Source-derived 26 days versus reference 21–22."
+  },
+  "4dfccbf7": {
+   "class": "reasoning",
+   "note": "Used earlier service intention, not later dated visit."
+  },
+  "370a8ff4": {
+   "class": "known label error",
+   "note": "81 days = 11 weeks 4 days; reference 15 weeks."
+  },
+  "71017277": {
+   "class": "reasoning",
+   "note": "Question says jewelry; source says aunt’s chandelier."
+  },
+  "gpt4_e414231f": {
+   "class": "reasoning",
+   "note": "Selected mountain-bike repair over road-bike weekend work."
+  },
+  "0bc8ad93": {
+   "class": "judge strictness",
+   "note": "“Didn’t mention a friend” rejected against categorical No."
+  },
+  "d01c6aa8": {
+   "class": "consolidation error",
+   "note": "Unrelated age 20 supplanted age 32; 15 versus 27."
+  },
+  "gpt4_2f56ae70": {
+   "class": "reasoning",
+   "note": "Read Disney+ April trial; still selected Apple TV+."
+  },
+  "618f13b2": {
+   "class": "known label error",
+   "note": "Latest wear count four conflicts with reference six."
+  }
+ }
+}

@@ -1,0 +1,95 @@
+{
+ "ALL": {
+  "correct": 472,
+  "n": 500,
+  "pct": 94.4,
+  "wilson95": [
+   92.0,
+   96.1
+  ]
+ },
+ "abstention": {
+  "correct": 28,
+  "n": 30,
+  "pct": 93.3,
+  "wilson95": [
+   78.7,
+   98.2
+  ]
+ },
+ "knowledge-update": {
+  "correct": 77,
+  "n": 78,
+  "pct": 98.7,
+  "wilson95": [
+   93.1,
+   99.8
+  ]
+ },
+ "multi-session": {
+  "correct": 118,
+  "n": 133,
+  "pct": 88.7,
+  "wilson95": [
+   82.2,
+   93.0
+  ]
+ },
+ "single-session-assistant": {
+  "correct": 56,
+  "n": 56,
+  "pct": 100.0,
+  "wilson95": [
+   93.6,
+   100.0
+  ]
+ },
+ "single-session-preference": {
+  "correct": 27,
+  "n": 30,
+  "pct": 90.0,
+  "wilson95": [
+   74.4,
+   96.5
+  ]
+ },
+ "single-session-user": {
+  "correct": 69,
+  "n": 70,
+  "pct": 98.6,
+  "wilson95": [
+   92.3,
+   99.7
+  ]
+ },
+ "temporal-reasoning": {
+  "correct": 125,
+  "n": 133,
+  "pct": 94.0,
+  "wilson95": [
+   88.6,
+   96.9
+  ]
+ },
+ "tuned": {
+  "correct": 377,
+  "n": 403,
+  "pct": 93.5,
+  "wilson95": [
+   90.7,
+   95.6
+  ]
+ },
+ "untuned": {
+  "correct": 95,
+  "n": 97,
+  "pct": 97.9,
+  "wilson95": [
+   92.8,
+   99.4
+  ]
+ },
+ "_errors": [],
+ "_unscored": [],
+ "_no_mind_call": []
+}
