@@ -32,7 +32,9 @@ def codex_home(prefix: str):
         yield home
     finally:
         # Write back a refresh: from a copy, or from a symlink Codex replaced with a new file.
-        if link.exists() and not link.is_symlink() and real.exists()                 and link.read_bytes() != (copied if copied is not None else real.read_bytes()):
+        before = copied if copied is not None else (real.read_bytes() if real.exists() else None)
+        if link.exists() and not link.is_symlink() and before is not None \
+                and link.read_bytes() != before:
             try:
                 json.loads(link.read_text(encoding="utf-8"))
                 shutil.copy2(link, real)
