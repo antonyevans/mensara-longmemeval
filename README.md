@@ -87,21 +87,29 @@ python -m lme_mind summary runs/first --untuned results/2026-10-17-m36/untouched
 ```
 
 `login` opens your browser for the same sign-in Codex and Claude use, and keeps the tokens in
-`~/.mensara-longmemeval/`, readable only by you. (A personal access token from the Mind's
+`~/.mensara-longmemeval/` (readable only by you on macOS and Linux; on Windows the folder has
+your user profile's permissions). `python -m lme_mind logout --mind-url ...` deletes them. (A personal access token from the Mind's
 `mint_owner_token` tool is not enough: the Mind treats its writes as lower trust and holds every
 one for approval.)
 
+**The harness deletes what it imports.** Each question replaces the contents of your personal
+history folder (`22-memory/recalls/<you>/history/`), which is also where a Mind keeps
+conversation history you import yourself. The harness records every file it writes and deletes
+only those, plus the timeline pages the Mind derives from them. If the folder already holds
+anything else, it stops before touching it; `--wipe-existing-history <folder>` overrides that and
+deletes those files too.
+
 For each question the harness:
 
-1. clears your personal history folder (`22-memory/recalls/<you>/history/`). A Mind never
-   applies a delete silently, so the harness proposes the deletes and approves its own review
-   card;
+1. clears what it imported for the previous question. A Mind never applies a delete silently,
+   so the harness proposes the deletes and approves its own review card;
 2. imports the question's sessions with `propose_write`, up to 20 files per proposal;
 3. waits for the Mind's history timer (every five minutes) to write a timeline covering every
    session;
 4. asks a fresh reader the question, with your Mind's standing rule as its instructions;
 5. grades the answer and saves a record in `runs/<name>/<question_id>.json`, with the reader's
-   full trace in `traces/`.
+   full trace in `traces/`. Traces include what the agent read from your Mind, so do not publish
+   a run folder without checking it.
 
 It is resumable: run the same command again and it skips answered questions and grades only the
 ones left unscored. A reader that never opens the Mind is run again, up to three times; the last

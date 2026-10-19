@@ -28,7 +28,10 @@ into `precompute_digests.py` with different line wrapping.
 
 Runner commit `8628eb68` in our internal operations repository. The run's manifest recorded these
 sha256 hashes of the files as checked out on the run machine (Windows line endings for the
-first four):
+first four). They are hashes of the files before the placeholders above were substituted, so the
+copies here do not match them byte for byte. `run_dev.py` also imports two small helpers
+(`prefill_cache.py`, `http_mind.py`) used only by the offline development loop, which are not
+included.
 
 | File | sha256 at run time |
 |---|---|

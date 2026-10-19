@@ -14,6 +14,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from .codexhome import codex_home
+
 READ_TOOLS = ["orient", "read", "query", "list_zones", "list_files"]
 # Codex features switched off in the published run, so the reader can only use the Mind.
 CODEX_DISABLE = ["apps", "plugins", "remote_plugin", "browser_use", "browser_use_external",
@@ -23,13 +25,8 @@ CODEX_DISABLE = ["apps", "plugins", "remote_plugin", "browser_use", "browser_use
 
 def codex(prompt: str, rule: str, url: str, token: str, model: str, effort: str,
           timeout: int = 420, disable: list[str] | None = None) -> dict:
-    home = Path(tempfile.mkdtemp(prefix="lme-reader-"))
-    try:
-        auth = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "auth.json"
-        if auth.exists():
-            shutil.copy(auth, home / "auth.json")
+    with codex_home("lme-reader-") as home:
         (home / "AGENTS.md").write_text(rule, encoding="utf-8")
-        (home / "config.toml").write_text("", encoding="utf-8")
         cmd = ["codex", "exec", "--ephemeral", "--json", "--skip-git-repo-check",
                "--sandbox", "read-only", "-m", model,
                "-c", f'model_reasoning_effort="{effort}"', "-c", 'web_search="disabled"']
@@ -55,8 +52,6 @@ def codex(prompt: str, rule: str, url: str, token: str, model: str, effort: str,
         calls = [i.get("tool") for i in done if i.get("type") == "mcp_tool_call"]
         return {"answer": answers[-1] if answers else "", "tools": calls, "exit": p.returncode,
                 "seconds": round(time.time() - t0, 1), "stderr": p.stderr[-1500:], "events": events}
-    finally:
-        shutil.rmtree(home, ignore_errors=True)
 
 
 def claude(prompt: str, rule: str, url: str, token: str, model: str, effort: str,
@@ -68,10 +63,11 @@ def claude(prompt: str, rule: str, url: str, token: str, model: str, effort: str
                                           "headers": {"Authorization": f"Bearer {token}"}}}}
         (work / "mcp.json").write_text(json.dumps(config), encoding="utf-8")
         allowed = ",".join(f"mcp__mind__{t}" for t in READ_TOOLS)
+        # Project settings only, so the user's own settings and hooks stay out.
         cmd = ["claude", "-p", "--output-format", "stream-json", "--verbose", "--model", model,
-               "--mcp-config", str(work / "mcp.json"), "--strict-mcp-config",
-               "--allowedTools", allowed, "--disallowedTools",
-               "Bash,Edit,Write,WebFetch,WebSearch,Task,NotebookEdit"]
+               "--setting-sources", "project", "--mcp-config", str(work / "mcp.json"),
+               "--strict-mcp-config", "--allowedTools", allowed, "--disallowedTools",
+               "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch,Task,NotebookEdit"]
         t0 = time.time()
         p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                            cwd=work, timeout=timeout + 30)

@@ -12,13 +12,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import subprocess
-import tempfile
 import time
 import urllib.request
-from pathlib import Path
 
+from .codexhome import codex_home
 from .rubric import get_anscheck_prompt
 
 
@@ -40,12 +38,7 @@ def _openai(prompt: str, model: str) -> str:
 
 
 def _codex(prompt: str, model: str, effort: str = "high") -> str:
-    home = Path(tempfile.mkdtemp(prefix="lme-judge-"))
-    try:
-        auth = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "auth.json"
-        if auth.exists():
-            shutil.copy(auth, home / "auth.json")
-        (home / "config.toml").write_text("", encoding="utf-8")
+    with codex_home("lme-judge-") as home:
         cmd = ["codex", "exec", "--ephemeral", "--json", "--skip-git-repo-check", "--sandbox",
                "read-only", "-m", model, "-c", f'model_reasoning_effort="{effort}"',
                "-c", 'web_search="disabled"', "-C", str(home), "-"]
@@ -62,8 +55,6 @@ def _codex(prompt: str, model: str, effort: str = "high") -> str:
             raise RuntimeError(f"codex judge exit={p.returncode} {p.stderr[-300:]}")
         texts = [i["text"] for i in items if i.get("type") == "agent_message"]
         return texts[-1] if texts else ""
-    finally:
-        shutil.rmtree(home, ignore_errors=True)
 
 
 def judge(row: dict, hypothesis: str, spec: str, attempts: int = 3) -> dict:

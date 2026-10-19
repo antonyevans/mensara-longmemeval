@@ -2,7 +2,8 @@
 
 `python -m lme_mind login --mind-url https://<your-mind>/mcp` opens your browser once. Tokens are
 kept, readable only by you, in ~/.mensara-longmemeval/<host>.json and refreshed automatically.
-A signed-in owner writes at the Mind's normal trust level, so imports apply directly and the
+(On Windows the file gets your user profile's permissions.) A signed-in owner writes at the
+Mind's normal trust level, so imports apply directly and the
 harness can approve its own delete proposals. (A personal access token from `mint_owner_token`
 works for reading but its writes wait for approval, so the harness does not use one.)
 """
@@ -57,17 +58,32 @@ def store_path(mind_url: str) -> Path:
 
 
 def _save(path: Path, record: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
+    tmp = path.with_suffix(".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(record, fh, indent=2)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
+
+def logout(mind_url: str) -> None:
+    store_path(mind_url).unlink(missing_ok=True)
 
 
 def _stamp(tokens: dict) -> dict:
     return {**tokens, "expires_at": time.time() + int(tokens.get("expires_in", 300))}
 
 
+def check_url(mind_url: str) -> None:
+    host = urllib.parse.urlsplit(mind_url).hostname or ""
+    if not mind_url.startswith("https://") and host not in {"127.0.0.1", "localhost"}:
+        raise AuthError("the Mind URL must start with https://")
+
+
 def login(mind_url: str) -> Path:
+    check_url(mind_url)
     base = mind_url.split("/mcp")[0]
     resource = _http_json(base + "/.well-known/oauth-protected-resource")
     meta = _http_json(resource["authorization_servers"][0].rstrip("/")
@@ -117,6 +133,7 @@ def login(mind_url: str) -> Path:
 
 def access_token(mind_url: str, force_refresh: bool = False) -> str:
     """A current access token, refreshed when it is within a minute of expiring."""
+    check_url(mind_url)
     path = store_path(mind_url)
     if not path.exists():
         raise AuthError(f"not signed in; run: python -m lme_mind login --mind-url {mind_url}")

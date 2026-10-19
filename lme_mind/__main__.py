@@ -25,12 +25,13 @@ def _connect(url: str) -> Mind:
     return Mind(url, lambda force=False: auth.access_token(url, force))
 
 
-def one(qid: str, row: dict, mind: Mind, folder: str, rule: str, args, out: Path) -> dict:
+def one(qid: str, row: dict, mind: Mind, folder: str, rule: str, args, out: Path,
+        ledger: minds.Ledger) -> dict:
     sessions = dataset.sessions(row)
     timing, t0 = {}, time.time()
-    minds.clear(mind, folder)
+    minds.clear(mind, folder, ledger)
     timing["clear"] = round(time.time() - t0, 1)
-    minds.import_sessions(mind, folder, sessions)
+    minds.import_sessions(mind, folder, sessions, ledger)
     timing["import"] = round(time.time() - t0, 1)
     timing["timeline_wait"] = minds.wait_for_timeline(mind, folder, len(sessions), args.timeline_timeout)
     ask = readers.READERS[args.reader]
@@ -62,6 +63,8 @@ def cmd_run(args) -> None:
     mind = _connect(args.mind_url)
     folder = minds.history_dir(mind, args.history_dir)
     rule = minds.standing_rule(mind)
+    ledger = minds.Ledger(out)
+    minds.preflight(mind, folder, ledger, args.wipe_existing_history)
     print(f"{len(qids)} questions; history folder {folder}", flush=True)
     for i, qid in enumerate(qids, 1):
         path = out / f"{qid}.json"
@@ -72,7 +75,7 @@ def cmd_run(args) -> None:
                 path.write_text(json.dumps(rec, indent=1), encoding="utf-8")
             continue
         try:
-            rec = one(qid, rows[qid], mind, folder, rule, args, out)
+            rec = one(qid, rows[qid], mind, folder, rule, args, out, ledger)
         except Exception as exc:  # noqa: BLE001 - recorded as a harness error, never graded
             (out / f"{qid}.error.txt").write_text(str(exc), encoding="utf-8")
             print(f"[{i}/{len(qids)}] {qid} ERROR {str(exc)[:200]}", flush=True)
@@ -83,7 +86,7 @@ def cmd_run(args) -> None:
         mark = {True: "ok", False: "MISS", None: "UNSCORED"}[rec["correct"]]
         print(f"[{i}/{len(qids)}] {qid} {rec['question_type']:26s} {mark} {rec['timing']}", flush=True)
     if not args.keep_history:
-        minds.clear(mind, folder)
+        minds.clear(mind, folder, ledger)
     print(json.dumps({**summarize(load_records(out))["ALL"], "harness_errors": len(harness_errors(out))}))
 
 
@@ -118,12 +121,20 @@ def cmd_login(args) -> None:
     print(f"signed in; tokens saved to {auth.login(args.mind_url)}")
 
 
+def cmd_logout(args) -> None:
+    auth.logout(args.mind_url)
+    print("stored sign-in removed")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="python -m lme_mind")
     sub = ap.add_subparsers(dest="cmd", required=True)
     li = sub.add_parser("login", help="sign in to your Mind in the browser (once)")
     li.add_argument("--mind-url", required=True, help="https://<your-mind>/mcp")
     li.set_defaults(fn=cmd_login)
+    lo = sub.add_parser("logout", help="delete the stored sign-in for a Mind")
+    lo.add_argument("--mind-url", required=True)
+    lo.set_defaults(fn=cmd_logout)
     run = sub.add_parser("run", help="import, ask and grade questions against your Mind")
     run.add_argument("--mind-url", required=True, help="https://<your-mind>/mcp")
     run.add_argument("--out", required=True)
@@ -139,6 +150,9 @@ def main() -> None:
                      help="openai:<model> (canonical) or codex:<model> (published run: codex:gpt-6-sol)")
     run.add_argument("--timeline-timeout", type=float, default=1800)
     run.add_argument("--keep-history", action="store_true", help="leave the last question imported")
+    run.add_argument("--wipe-existing-history", metavar="FOLDER",
+                     help="allow deleting files already in FOLDER that this harness did not import "
+                          "(repeat the exact folder path; without it the run refuses to start)")
     run.set_defaults(fn=cmd_run)
     jd = sub.add_parser("judge", help="grade a hypotheses.jsonl file (for example our published answers)")
     jd.add_argument("--answers", required=True)

@@ -3,13 +3,19 @@
 Everything goes through the owner's normal MCP tools. Session files are written with
 `propose_write`; the Mind's own history timer (every five minutes) then writes the dated
 digest and timeline with the Mind's own model connection. Deletes never auto-apply in a
-Mind, so clearing proposes them and the owner's token approves its own card.
+Mind, so clearing proposes them and the signed-in owner approves its own card.
+
+The harness only ever deletes files it imported itself (recorded in a ledger in the run
+folder) and the timeline pages the Mind derived from them. It refuses to start if the history
+folder holds anything else, unless the caller names that folder in --wipe-existing-history.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import time
+from pathlib import Path
 
 from .mcp import Mind, MindError
 
@@ -17,11 +23,26 @@ from .mcp import Mind, MindError
 BATCH_FILES = 20
 BATCH_BYTES = 900_000
 GENERATED = {"_index.md", "_summary.md"}
+DERIVED = "derived from imported conversation history"
+HISTORY = re.compile(r"22-memory/recalls/[0-9a-f]{64}/history")
+
+
+class Ledger:
+    """Paths this harness imported, kept in the run folder so a resumed run can clear them."""
+
+    def __init__(self, run: Path):
+        self.path = run / ".imported-paths.json"
+        self.paths = set(json.loads(self.path.read_text(encoding="utf-8"))) if self.path.exists() else set()
+
+    def save(self) -> None:
+        self.path.write_text(json.dumps(sorted(self.paths), indent=0), encoding="utf-8")
 
 
 def history_dir(mind: Mind, override: str | None = None) -> str:
     """The caller's personal recalls folder + /history, found from orient."""
     if override:
+        if not HISTORY.fullmatch(override.rstrip("/")):
+            raise MindError("--history-dir must be a personal history folder: 22-memory/recalls/<id>/history")
         return override.rstrip("/")
     o = mind.tool("orient")
     personal = {z.removeprefix("personal-recalls-")
@@ -75,30 +96,58 @@ def files(mind: Mind, folder: str) -> list[dict]:
     return [f for f in listed if f["path"].rsplit("/", 1)[-1] not in GENERATED]
 
 
-def clear(mind: Mind, folder: str, timeout: float = 300.0) -> None:
-    """Delete every source and derived page in the history folder."""
-    present = files(mind, folder)
+def _ours(f: dict, ledger: Ledger) -> bool:
+    return f["path"] in ledger.paths or (f.get("memory") or {}).get("source") == DERIVED
+
+
+def preflight(mind: Mind, folder: str, ledger: Ledger, wipe: str | None) -> None:
+    """Refuse to touch a history folder that holds anything this harness did not import."""
+    foreign = [f["path"] for f in files(mind, folder) if not _ours(f, ledger)]
+    if not foreign:
+        return
+    if wipe and wipe.rstrip("/") == folder:
+        ledger.paths.update(foreign)  # the caller named this folder: its contents may go
+        ledger.save()
+        return
+    raise SystemExit(
+        f"{folder} already holds {len(foreign)} file(s) this harness did not import, for example "
+        f"{foreign[0]}.\nEach question replaces the folder's contents, so running here would delete "
+        f"them. Use a new, empty Mind, or pass --wipe-existing-history {folder} to delete them.")
+
+
+def clear(mind: Mind, folder: str, ledger: Ledger, timeout: float = 300.0) -> None:
+    """Delete what this harness imported and the pages the Mind derived from it."""
+    present = [f for f in files(mind, folder) if _ours(f, ledger)]
     for i in range(0, len(present), BATCH_FILES):
         _propose(mind, [{"op": "delete", "path": f["path"], "base_sha": f["memory"]["revision"]}
                         for f in present[i:i + BATCH_FILES]],
                  "LongMemEval harness: clear the previous question's imported history")
     deadline = time.time() + timeout
-    while files(mind, folder):
+    while [f for f in files(mind, folder) if _ours(f, ledger)]:
         if time.time() > deadline:
             raise MindError(f"history folder {folder} did not clear")
         time.sleep(5)
+    ledger.paths.clear()
+    ledger.save()
 
 
-def import_sessions(mind: Mind, folder: str, sessions: list[tuple[str, str]]) -> None:
+def import_sessions(mind: Mind, folder: str, sessions: list[tuple[str, str]], ledger: Ledger) -> None:
     batch, size = [], 0
+
+    def send():
+        # Record before proposing, so a crash mid-import still leaves the files clearable.
+        ledger.paths.update(c["path"] for c in batch)
+        ledger.save()
+        _propose(mind, batch, "LongMemEval harness: import timestamped conversation history")
+
     for name, content in sessions:
         if batch and (len(batch) == BATCH_FILES or size + len(content.encode("utf-8")) > BATCH_BYTES):
-            _propose(mind, batch, "LongMemEval harness: import timestamped conversation history")
+            send()
             batch, size = [], 0
         batch.append({"op": "create", "path": f"{folder}/{name}", "content": content})
         size += len(content.encode("utf-8"))
     if batch:
-        _propose(mind, batch, "LongMemEval harness: import timestamped conversation history")
+        send()
 
 
 def wait_for_timeline(mind: Mind, folder: str, count: int, timeout: float) -> float:

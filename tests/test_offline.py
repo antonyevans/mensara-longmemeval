@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -92,8 +93,9 @@ class _Fake(BaseHTTPRequestHandler):
                         self.files[c["path"]] = c["content"]
                 data = {"ok": True, "status": "applied", "proposal_id": "p1"}
             else:
-                data = {"ok": True, "files": [{"path": p, "memory": {"revision": "r"}}
-                                              for p in sorted(self.files)]}
+                data = {"ok": True, "files": [{"path": p, "memory": {"revision": "r", "source": (
+                    "derived from imported conversation history" if p.endswith("timeline.md")
+                    else "imported conversation history")}} for p in sorted(self.files)]}
             result, sse = {"content": [{"type": "text", "text": json.dumps(data)}]}, True
         body = json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": result})
         self.send_response(200)
@@ -104,17 +106,35 @@ class _Fake(BaseHTTPRequestHandler):
 
 
 class Client(unittest.TestCase):
-    def test_import_and_clear_round_trip(self):
-        server = HTTPServer(("127.0.0.1", 0), _Fake)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-        try:
-            m = Mind(f"http://127.0.0.1:{server.server_port}/mcp", "t0k")
-            minds.import_sessions(m, "h", [("session-000.md", "a"), ("session-001.md", "b")])
-            self.assertEqual(sorted(_Fake.files), ["h/session-000.md", "h/session-001.md"])
-            minds.clear(m, "h")
-            self.assertEqual(_Fake.files, {})
-        finally:
-            server.shutdown()
+    def setUp(self):
+        _Fake.files = {}
+        self.server = HTTPServer(("127.0.0.1", 0), _Fake)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.mind = Mind(f"http://127.0.0.1:{self.server.server_port}/mcp", "t0k")
+        self.run_dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def test_clear_deletes_only_what_it_imported(self):
+        _Fake.files = {"h/mine-from-before.md": "x"}  # a user's own imported history
+        ledger = minds.Ledger(self.run_dir)
+        with self.assertRaises(SystemExit):
+            minds.preflight(self.mind, "h", ledger, None)
+        _Fake.files["h/timeline.md"] = "derived"
+        minds.import_sessions(self.mind, "h", [("session-000.md", "a"), ("session-001.md", "b")], ledger)
+        minds.clear(self.mind, "h", minds.Ledger(self.run_dir))  # a resumed run reloads the ledger
+        self.assertEqual(sorted(_Fake.files), ["h/mine-from-before.md"])
+
+    def test_wipe_needs_the_exact_folder(self):
+        _Fake.files = {"h/old.md": "x"}
+        ledger = minds.Ledger(self.run_dir)
+        with self.assertRaises(SystemExit):
+            minds.preflight(self.mind, "h", ledger, "other")
+        minds.preflight(self.mind, "h", ledger, "h")
+        minds.clear(self.mind, "h", ledger)
+        self.assertEqual(_Fake.files, {})
 
 
 if __name__ == "__main__":

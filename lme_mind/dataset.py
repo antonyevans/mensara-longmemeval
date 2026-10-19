@@ -20,11 +20,12 @@ def load(path: str | None) -> dict[str, dict]:
     if not target.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         print(f"downloading {URL}")
-        urllib.request.urlretrieve(URL, target)
-        digest = hashlib.sha256(target.read_bytes()).hexdigest()
-        if digest != SHA256:
-            target.unlink()
-            raise SystemExit(f"downloaded dataset has sha256 {digest}, expected {SHA256}")
+        part = target.with_suffix(".part")
+        urllib.request.urlretrieve(URL, part)
+        part.replace(target)
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    if digest != SHA256:
+        raise SystemExit(f"{target} has sha256 {digest}, expected {SHA256} (the cleaned S release)")
     rows = json.loads(target.read_text(encoding="utf-8"))
     return {r["question_id"]: r for r in rows}
 
