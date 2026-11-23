@@ -67,8 +67,8 @@ makes 500 calls with the official prompt at temperature 0. Or use the official e
 You need:
 
 - **A Mensara Mind you own, on release 0.20.6 or later.** Use a new, empty Mind: the agent can
-  read everything you can, so anything else in it can leak into answers. (Sign-up is not open
-  yet; we are working with a small founding group. [Join the waitlist](https://app.mensara.ai/#waitlist).)
+  read everything you can, so anything else in it can leak into answers. ([Sign up for a
+  Mind](https://app.mensara.ai/auth/signup).)
 - **A model connection on the Mind.** The Mind makes the session digests with it: one call per
   session, about 48 per question, plus one call for the cross-session summary. Digests are cached
   by content, so rerunning a question costs nothing extra.
